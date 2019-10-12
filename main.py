@@ -1,76 +1,73 @@
-# Hard-sphere gas.
+#coding=utf-8
 
-# Bruce Sherwood
-
-from vpython import *
+from __future__ import division
+from visual import *
+from visual.graph import *
 from math import *
+import wx
 
-win = 500 # размер картинки
+win_height = 900
+win_width = 1600
 
-Natoms = 20  # change this to have more or fewer atoms
+w = window(width = win_width + 2 * window.dwidth,
+            height = win_height + window.dheight,
+            title = 'Widgets',
+            style = wx.CAPTION | wx.CLOSE_BOX)
 
-# какие-то константы
-L = 1  # container is a cube L on a side
-gray = color.gray(0.7)  # color of edges of container
-mass = 4E-3 / 6E23  # helium mass
-Ratom = 0.06  # wildly exaggerated size of helium atom
-k = 1.4E-23  # Boltzmann constant
-T = 300  # around room temperature
+offset = 20
+disp = display(window = w, x = offset, y = offset, forward = -vector(0,1,2),
+            width = w.width / 3 - 2 * offset, height = w.height - 2 * offset)
+
+g1 = gdisplay(window = w, x = w.width / 3, y = offset,
+            width = w.width / 3, height = w.height / 2)
+
+
+Natoms = 60 # change this to have more or fewer atoms
+
+L = 1 # container is a cube L on a side
+gray = color.gray(0.7) # color of edges of container
+mass = 4E-3 / 6E23 # helium mass
+Ratom = 0.06 # wildly exaggerated size of helium atom
+k = 1.4E-23 # Boltzmann constant
+T = 300 # around room temperature
 dt = 1E-5
+d = L / 2 + Ratom # half of cylinder's height
 
-animation = canvas(width=win, height=win, align='left')
-animation.range = L
-animation.title = 'A "hard-sphere" gas'
-s = """  Theoretical and averaged speed distributions (meters/sec).
-  Initially all atoms have the same speed, but collisions
-  change the speeds of the colliding atoms. One of the atoms is
-  marked and leaves a trail so you can follow its path.
 
-"""
-animation.caption = s
+ringtop = ring(pos = (0, d, 0), axis = (0, -d, 0), radius = d,
+            thickness = 0.005)
+ringbottom = ring(pos = (0, -d, 0), axis = (0, -d, 0), radius = d,
+            thickness = 0.005)
+body = cylinder(pos = (0, -d, 0), axis = (0, 2*d, 0), radius = d,
+            opacity = 0.2)
 
-d = L / 2 + Ratom       # половина высоты цилиндра
-cylinder_radius = 0.005 # радиус цилиндра
 
-# прорисовка цилиндра
-ringtop = ring(pos=vector(0, d, 0), axis=vector(0, -d, 0), radius=d,
-    thickness=0.005)
-ringbottom = ring(pos=vector(0, -d, 0), axis=vector(0, -d, 0), radius=d,
-    thickness=0.005)
-vert1 = curve(color=gray, radius=cylinder_radius)
-vert2 = curve(color=gray, radius=cylinder_radius)
-vert3 = curve(color=gray, radius=cylinder_radius)
-vert4 = curve(color=gray, radius=cylinder_radius)
-vert1.append([vector(0, -d, -d), vector(0, d, -d)])
-vert2.append([vector(0, -d, d), vector(0, d, d)])
-vert3.append([vector(d, -d, 0), vector(d, d, 0)])
-vert4.append([vector(-d, -d, 0), vector(-d, d, 0)])
-
-Atoms = []  # сферы vpython
-p = []      # импульсы атомов - векторы vpython
-apos = []   # позиции атомов - векторы vpython
+Atoms = []  # spheres
+p = []      # momentums (vectors)
+apos = []   # positions (vectors)
 pavg = sqrt(3 * mass * k * T)  # average kinetic energy p**2/(2mass) = (3/2)kT
 
-#равномерное распределение частиц
+# uniform particle distribution
 for i in range(Natoms):
-    qq = 2 * pi * random()
+    qq = 2 * pi * random.random()
 
-    x = sqrt(random()) * L * cos(qq) / 2
-    y = L * random() - L / 2
-    z = sqrt(random()) * L * sin(qq) / 2
+    x = sqrt(random.random()) * L * cos(qq) / 2
+    y = L * random.random() - L / 2
+    z = sqrt(random.random()) * L * sin(qq) / 2
 
     if i == 0:
+        # particle with a trace
         Atoms.append(sphere(pos=vector(x, y, z), radius=Ratom,
             color=color.cyan, make_trail=True, retain=100,
             trail_radius=0.3 * Ratom))
-        # первая частица, за которой идет след
     else:
         Atoms.append(sphere(pos=vector(x, y, z), radius=Ratom, color=gray))
 
     apos.append(vector(x, y, z))
-    # все импульсы изначально одинаковы, возможно, надо поменять хз
-    theta = pi * random()
-    phi = 2 * pi * random()
+    
+
+    theta = pi * random.random()
+    phi = 2 * pi * random.random()
 
     px = pavg * sin(theta) * cos(phi)
     py = pavg * sin(theta) * sin(phi)
@@ -78,44 +75,33 @@ for i in range(Natoms):
 
     p.append(vector(px, py, pz))
 
-deltav = 100  # binning for v histogram
 
-#построение гистограммы
-def barx(v):
-    return int(v / deltav)  # index into bars array
+deltav = 100 # histogram bar width
+
+g2 = gdisplay(window = w, x = w.width / 3, y = 2 * offset + g1.height,
+            width = w.width / 3, height = w.height / 2,
+            xmax = 3000, ymax = Natoms * deltav / 1000)
 
 
-nhisto = int(4500 / deltav)
-histo = []
-for i in range(nhisto):
-    histo.append(0.0)
-histo[barx(pavg / mass)] = Natoms
+# theoretical prediction
+theory_speed = gcurve(gdisplay=g2, color=color.cyan)
 
-gg = graph(width=win, height=0.4 * win, xmax=3000, align='left',
-    xtitle='speed, m/s', ytitle='Number of atoms', ymax=Natoms * deltav / 1000)
-
-theory = gcurve(color=color.cyan)
 dv = 10
-for v in range(0, 3001 + dv, dv):  # theoretical prediction
-    theory.plot(v, (deltav / dv) * Natoms * 4 * pi * ((mass / (2 * pi * k * T)) ** 1.5) *
-        exp(-0.5 * mass * (v ** 2) / (k * T)) * (v ** 2) * dv)
+for v in range(0, 3001 + dv, dv):  
+    theory_speed.plot(pos=(v, (deltav / dv) * Natoms *
+                4 * pi * ((mass / (2 * pi * k * T)) ** 1.5) *
+                exp(-0.5 * mass * (v ** 2) / (k * T)) * (v ** 2) * dv))
 
-accum = []
-for i in range(int(3000 / deltav)):
-    accum.append([deltav * (i + .5), 0])
-vdist = gvbars(color=color.red, delta=deltav)
+# histogram
+hist_speed = ghistogram(gdisplay = g2, bins = arange(0,3000, 100),
+            color = color.red, accumulate = True, average = True)
 
-def interchange(v1, v2):  # remove from v1 bar, add to v2 bar
-    barx1 = barx(v1)
-    barx2 = barx(v2)
-    if barx1 == barx2:
-        return
-    if barx1 >= len(histo) or barx2 >= len(histo):
-        return
-    histo[barx1] -= 1
-    histo[barx2] += 1
 
-# проверка на сталкивающиеся шары
+speed_data = [] # histogram data
+for i in range(Natoms):
+    speed_data.append(mag(p[i]) / mass)
+
+
 def checkCollisions():
     hitlist = []
     r2 = 2 * Ratom
@@ -126,27 +112,17 @@ def checkCollisions():
                 hitlist.append([i, j])
     return hitlist
 
-nhisto = 0  # number of histogram snapshots to average
-# основной цикл
 while True:
-    rate(50)
-    # Accumulate and average histogram snapshots
-    for i in range(len(accum)):
-        accum[i][1] = (nhisto * accum[i][1] + histo[i]) / (nhisto + 1)
+    rate(60)
     
-    if nhisto % 10 == 0:
-        vdist.data = accum
-    nhisto += 1
-
-    # Update all positions
     for i in range(Natoms):
         Atoms[i].pos = apos[i] = apos[i] + (p[i] / mass) * dt
+        speed_data[i] = mag(p[i]) / mass
 
-    # Check for collisions
+    hist_speed.plot(data = speed_data)
+
     hitlist = checkCollisions()
 
-    # непонятный цикл для столкнувшихся частиц
-    # If any collisions took place, update momenta of the two atoms
     for ij in hitlist:
         
         i = ij[0]
@@ -165,8 +141,8 @@ while True:
             continue
 
         # theta is the angle between vrel and rrel:
-        dx = dot(rrel, vrel.hat)  # rrel.mag*cos(theta)
-        dy = cross(rrel, vrel.hat).mag  # rrel.mag*sin(theta)
+        dx = dot(rrel, norm(vrel))  # rrel.mag*cos(theta)
+        dy = cross(rrel, norm(vrel)).mag  # rrel.mag*sin(theta)
         # alpha is the angle of the triangle composed of rrel, path of atom j, and a line
         #   from the center of atom i to the center of atom j where atome j hits atom i:
         alpha = asin(dy / (2 * Ratom))
@@ -185,10 +161,8 @@ while True:
         p[j] = pcmj + ptot * mass / mtot
         apos[i] = posi + (p[i] / mass) * deltat  # move forward deltat in time
         apos[j] = posj + (p[j] / mass) * deltat
-        interchange(vi.mag, p[i].mag / mass)
-        interchange(vj.mag, p[j].mag / mass)
 
-    # столкновение со стенками
+    # collisions with walls
     for i in range(Natoms):
 
         # проекция радиус-вектора на плоскость
