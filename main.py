@@ -23,17 +23,27 @@ g1 = gdisplay(window = w, x = w.width / 3, y = offset,
 
 
 Natoms = 60 # change this to have more or fewer atoms
-
-L = 1 # container is a cube L on a side
-gray = color.gray(0.7) # color of edges of container
 mass = 4E-3 / 6E23 # helium mass
 Ratom = 0.06 # wildly exaggerated size of helium atom
 k = 1.4E-23 # Boltzmann constant
 T = 300 # around room temperature
 dt = 1E-5
+
+
+time = 0  # время, чтобы считать скорость поршня
+def speed(time):
+    if ((time % 100) < 50):
+        return sqrt(3 * mass * k * T) / (5 * mass)
+    else:
+        return - sqrt(3 * mass * k * T) / (5 * mass)
+
+
+L = 1 # container is a cube L on a side
+gray = color.gray(0.7) # color of edges of container
 d = L / 2 + Ratom # half of cylinder's height
+topborder = d
 
-
+cylindertop = cylinder(pos = (0, d, 0), axis = (0, -d / 50, 0), radius = d)
 ringtop = ring(pos = (0, d, 0), axis = (0, -d, 0), radius = d,
             thickness = 0.005)
 ringbottom = ring(pos = (0, -d, 0), axis = (0, -d, 0), radius = d,
@@ -115,6 +125,10 @@ def checkCollisions():
 while True:
     rate(60)
     
+    sp = speed(time)
+    cylindertop.pos.y -= sp * dt
+    time += 1
+    
     for i in range(Natoms):
         Atoms[i].pos = apos[i] = apos[i] + (p[i] / mass) * dt
         speed_data[i] = mag(p[i]) / mass
@@ -188,9 +202,10 @@ while True:
         loc = apos[i]
 
         # вылет за торцы
-        # (будет изменено в связи с поршнем)
-        if abs(loc.y) > L / 2:
-            if loc.y < 0:
-                p[i].y = abs(p[i].y)
-            else:
-                p[i].y = -abs(p[i].y)
+        if loc.y < - L / 2:
+            p[i].y = abs(p[i].y)
+
+        if loc.y > cylindertop.pos.y - Ratom:
+            v_otn = p[i].y / mass + sp
+            if v_otn > 0:
+                p[i].y = (- v_otn - sp) * mass
