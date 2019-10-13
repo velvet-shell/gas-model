@@ -11,21 +11,20 @@ win_width = 1600
 
 w = window(width = win_width + 2 * window.dwidth,
             height = win_height + window.dheight,
-            title = 'Widgets',
+            title = 'Physics demonstration',
             style = wx.CAPTION | wx.CLOSE_BOX)
 
 offset = 20
-disp = display(window = w, x = offset, y = offset, forward = -vector(0,1,2),
+disp = display(window = w, x = offset, y = offset, forward = vector(0,-0.3,-1),
+            range=1.5,
             width = w.width / 3 - 2 * offset, height = w.height - 2 * offset)
-
-g1 = gdisplay(window = w, x = w.width / 3, y = offset,
-            width = w.width / 3, height = w.height / 2)
 
 
 Natoms = 60 # change this to have more or fewer atoms
 mass = 4E-3 / 6E23 # helium mass
 Ratom = 0.06 # wildly exaggerated size of helium atom
 k = 1.4E-23 # Boltzmann constant
+R = 8.3
 T = 300 # around room temperature
 dt = 1E-5
 
@@ -86,10 +85,17 @@ for i in range(Natoms):
     p.append(vector(px, py, pz))
 
 
+#temperature graph
+g1 = gdisplay(window = w, x = w.width / 3, y = offset,
+            width = w.width / 3, height = w.height / 2)
+
+graph_temp = gcurve(gdisplay = g1, color=color.cyan)
+
+
 deltav = 100 # histogram bar width
 
-g2 = gdisplay(window = w, x = w.width / 3, y = 2 * offset + g1.height,
-            width = w.width / 3, height = w.height / 2,
+g2 = gdisplay(window = w, x = w.width / 3, y = 2 * offset + w.height / 2,
+            width = w.width / 3, height = w.height / 2, 
             xmax = 3000, ymax = Natoms * deltav / 1000)
 
 
@@ -103,7 +109,7 @@ for v in range(0, 3001 + dv, dv):
                 exp(-0.5 * mass * (v ** 2) / (k * T)) * (v ** 2) * dv))
 
 # histogram
-hist_speed = ghistogram(gdisplay = g2, bins = arange(0,3000, 100),
+hist_speed = ghistogram(gdisplay = g2, bins = arange(0, 3000, 100),
             color = color.red, accumulate = True, average = True)
 
 
@@ -129,11 +135,19 @@ while True:
     cylindertop.pos.y -= sp * dt
     time += 1
     
+
     for i in range(Natoms):
         Atoms[i].pos = apos[i] = apos[i] + (p[i] / mass) * dt
         speed_data[i] = mag(p[i]) / mass
 
     hist_speed.plot(data = speed_data)
+
+    total_momentum = 0
+    for i in range(Natoms):
+        total_momentum += mag2(p[i])
+    
+    graph_temp.plot(pos = (time, total_momentum / (3 * k * mass) / Natoms))
+
 
     hitlist = checkCollisions()
 
@@ -178,7 +192,6 @@ while True:
 
     # collisions with walls
     for i in range(Natoms):
-
         # проекция радиус-вектора на плоскость
         loc = vector(apos[i])
         loc.y = 0
@@ -200,7 +213,6 @@ while True:
             # dotlp = 0 - атом летит вдоль стенки
         
         loc = apos[i]
-
         # вылет за торцы
         if loc.y < - L / 2:
             p[i].y = abs(p[i].y)
