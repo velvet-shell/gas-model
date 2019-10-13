@@ -1,6 +1,6 @@
 #coding=utf-8
 
-from __future__ import division
+from __future__ import print_function, division
 from visual import *
 from visual.graph import *
 from math import *
@@ -15,8 +15,8 @@ w = window(width = win_width + 2 * window.dwidth,
             style = wx.CAPTION | wx.CLOSE_BOX)
 
 offset = 20
-disp = display(window = w, x = offset, y = offset, forward = vector(0,-0.3,-1),
-            range=1.5,
+disp = display(window = w, x = offset, y = offset, forward = vector(0, -0.3, -1),
+            range = 1.5,
             width = w.width / 3 - 2 * offset, height = w.height - 2 * offset)
 
 
@@ -31,7 +31,7 @@ dt = 1E-5
 
 time = 0  # время, чтобы считать скорость поршня
 def speed(time):
-    if ((time % 100) < 50):
+    if (time % 100 < 50):
         return sqrt(3 * mass * k * T) / (5 * mass)
     else:
         return - sqrt(3 * mass * k * T) / (5 * mass)
@@ -47,7 +47,7 @@ ringtop = ring(pos = (0, d, 0), axis = (0, -d, 0), radius = d,
             thickness = 0.005)
 ringbottom = ring(pos = (0, -d, 0), axis = (0, -d, 0), radius = d,
             thickness = 0.005)
-body = cylinder(pos = (0, -d, 0), axis = (0, 2*d, 0), radius = d,
+body = cylinder(pos = (0, -d, 0), axis = (0, 2 * d, 0), radius = d,
             opacity = 0.2)
 
 
@@ -66,11 +66,12 @@ for i in range(Natoms):
 
     if i == 0:
         # particle with a trace
-        Atoms.append(sphere(pos=vector(x, y, z), radius=Ratom,
-            color=color.cyan, make_trail=True, retain=100,
-            trail_radius=0.3 * Ratom))
+        Atoms.append(sphere(pos = vector(x, y, z), radius = Ratom,
+                    color = color.cyan, make_trail = True, retain = 100,
+                    trail_radius=0.3 * Ratom))
     else:
-        Atoms.append(sphere(pos=vector(x, y, z), radius=Ratom, color=gray))
+        Atoms.append(sphere(pos = vector(x, y, z), radius = Ratom,
+                    color = gray))
 
     apos.append(vector(x, y, z))
     
@@ -100,7 +101,7 @@ g2 = gdisplay(window = w, x = w.width / 3, y = 2 * offset + w.height / 2,
 
 
 # theoretical prediction
-theory_speed = gcurve(gdisplay=g2, color=color.cyan)
+theory_speed = gcurve(gdisplay = g2, color = color.cyan)
 
 dv = 10
 for v in range(0, 3001 + dv, dv):  
