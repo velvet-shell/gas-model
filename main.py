@@ -1,25 +1,15 @@
 #coding=utf-8
-
-from __future__ import print_function, division
+from __future__ import unicode_literals, print_function, division
 from visual import *
 from visual.graph import *
 from math import *
 import wx
 
-win_height = 900
-win_width = 1600
-
-w = window(width = win_width + 2 * window.dwidth,
-            height = win_height + window.dheight,
-            title = 'Physics demonstration',
-            style = wx.CAPTION | wx.CLOSE_BOX)
-
-offset = 20
-disp = display(window = w, x = offset, y = offset, forward = vector(0, -0.3, -1),
-            range = 1.5,
-            width = w.width / 3 - 2 * offset, height = w.height - 2 * offset)
-
-
+win_height = 570
+win_width = 1100
+#здесь появляется нечто новое :)
+ampl = 420 #амплитуда движения
+period = 5
 Natoms = 60 # change this to have more or fewer atoms
 mass = 4E-3 / 6E23 # helium mass
 Ratom = 0.06 # wildly exaggerated size of helium atom
@@ -27,6 +17,72 @@ k = 1.4E-23 # Boltzmann constant
 R = 8.3
 T = 300 # around room temperature
 dt = 1E-5
+
+w = window(width = win_width + 2 * window.dwidth,
+            height = win_height + window.dheight,
+            title = 'Модель динамики газа в поршне',
+            style = wx.CAPTION | wx.CLOSE_BOX)
+
+
+p = w.panel
+
+t1 = wx.RadioBox(p, pos=(win_width - 270,12), size=(270, 120),
+                 choices = ['Вариант движения 1', 'Вариант движения 2'], style=wx.RA_SPECIFY_ROWS)
+
+def setampl(evt): #установление амплитуды
+    ampl = amplslider.GetValue()
+    
+amplslider = wx.Slider(p, pos=(win_width - 270,170), size=(270,20), minValue=0, maxValue=500)
+amplslider.Bind(wx.EVT_SCROLL, setampl)
+wx.StaticText(p, pos=(win_width - 270,140), label='Амплитуда движения поршня:')
+
+def setper(evt): #установление периода
+    period = perslider.GetValue()
+    
+perslider = wx.Slider(p, pos=(win_width - 270,230), size=(270,20), minValue=1, maxValue=50)
+perslider.Bind(wx.EVT_SCROLL, setper)
+wx.StaticText(p, pos=(win_width - 270,200), label='Период движения поршня:')
+
+def setnum(evt): #установление числа атомов
+    Natoms = numslider.GetValue()
+    
+numslider = wx.Slider(p, pos=(win_width - 270,290), size=(270,20), minValue=1, maxValue=2000)
+numslider.Bind(wx.EVT_SCROLL, setnum)
+wx.StaticText(p, pos=(win_width - 270,260), label='Число атомов:')
+
+def setmass(evt): #установление массы
+    mass = massslider.GetValue()
+
+massslider = wx.Slider(p, pos=(win_width - 270,350), size=(270,20), minValue=1, maxValue=5000)
+massslider.Bind(wx.EVT_SCROLL, setmass)
+wx.StaticText(p, pos=(win_width - 270,320), label='Масса атома:')
+
+
+def setrat(evt): #установление размера атомов
+    Ratom = ratslider.GetValue()
+
+ratlslider = wx.Slider(p, pos=(win_width - 270,410), size=(270,20), minValue=0, maxValue=500)
+ratlslider.Bind(wx.EVT_SCROLL, setrat)
+wx.StaticText(p, pos=(win_width - 270,380), label='Размер атома:')
+
+
+def settemp(evt): #установление температуры
+    T = tempslider.GetValue()
+    
+tempslider = wx.Slider(p, pos=(win_width - 270,470), size=(270,20), minValue=1, maxValue=2000)
+tempslider.Bind(wx.EVT_SCROLL, settemp)
+wx.StaticText(p, pos=(win_width - 270,440), label='Температура:')
+
+def leave(evt): # выход из программы
+    exit()
+
+exit_program = wx.Button(p, label='ВЫХОД', pos=(win_width - 270,win_height-50), size = (270,50))
+exit_program.Bind(wx.EVT_BUTTON, leave)
+
+offset = 20
+disp = display(window = w, x = offset, y = offset, forward = vector(0,-0.3,-1),
+            range = 1.5,
+            width = w.width / 3 - 2 * offset, height = w.height - 2 * offset)
 
 
 time = 0  # время, чтобы считать скорость поршня
@@ -68,7 +124,7 @@ for i in range(Natoms):
         # particle with a trace
         Atoms.append(sphere(pos = vector(x, y, z), radius = Ratom,
                     color = color.cyan, make_trail = True, retain = 100,
-                    trail_radius=0.3 * Ratom))
+                    trail_radius = 0.3 * Ratom))
     else:
         Atoms.append(sphere(pos = vector(x, y, z), radius = Ratom,
                     color = gray))
@@ -92,11 +148,10 @@ g1 = gdisplay(window = w, x = w.width / 3, y = offset,
 
 graph_temp = gcurve(gdisplay = g1, color=color.cyan)
 
-
 deltav = 100 # histogram bar width
 
 g2 = gdisplay(window = w, x = w.width / 3, y = 2 * offset + w.height / 2,
-            width = w.width / 3, height = w.height / 2, 
+            width = w.width / 3, height = w.height / 2,
             xmax = 3000, ymax = Natoms * deltav / 1000)
 
 
@@ -136,7 +191,6 @@ while True:
     cylindertop.pos.y -= sp * dt
     time += 1
     
-
     for i in range(Natoms):
         Atoms[i].pos = apos[i] = apos[i] + (p[i] / mass) * dt
         speed_data[i] = mag(p[i]) / mass
@@ -146,7 +200,7 @@ while True:
     total_momentum = 0
     for i in range(Natoms):
         total_momentum += mag2(p[i])
-    
+
     graph_temp.plot(pos = (time, total_momentum / (3 * k * mass) / Natoms))
 
 
@@ -193,6 +247,7 @@ while True:
 
     # collisions with walls
     for i in range(Natoms):
+
         # проекция радиус-вектора на плоскость
         loc = vector(apos[i])
         loc.y = 0
@@ -214,6 +269,7 @@ while True:
             # dotlp = 0 - атом летит вдоль стенки
         
         loc = apos[i]
+
         # вылет за торцы
         if loc.y < - L / 2:
             p[i].y = abs(p[i].y)
